@@ -75,7 +75,7 @@ export default function Page() {
                       Contact
                     </Link>
                     <Button variant="outline" asChild className="w-full">
-                      <a href="/Abdul_Wahid_Chohan_Resume.pdf" download>
+                      <a href="/Abdul Wahid.pdf" download>
                         <Download className="mr-2 h-4 w-4" /> Resume
                       </a>
                     </Button>
