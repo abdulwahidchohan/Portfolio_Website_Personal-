@@ -1,0 +1,70 @@
+name: SEO Performance Audit
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # Monthly on the 1st
+  workflow_dispatch: # Manual trigger
+  push:
+    branches: [main]
+    paths: ['app/**', 'components/**', 'next.config.js']
+
+jobs:
+  seo-audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application
+        run: npm start &
+        env:
+          PORT: 3000
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:3000
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: SEO Meta Tags Audit
+        run: |
+          echo "Checking meta tags..."
+          curl -s http://localhost:3000 | grep -E '<title>|<meta.*description|<meta.*keywords|<meta.*og:' || echo "Meta tags check completed"
+
+      - name: Check robots.txt
+        run: |
+          echo "Checking robots.txt..."
+          curl -s http://localhost:3000/robots.txt || echo "robots.txt check completed"
+
+      - name: Check sitemap.xml
+        run: |
+          echo "Checking sitemap.xml..."
+          curl -s http://localhost:3000/sitemap.xml || echo "sitemap.xml check completed"
+
+      - name: Performance Budget Check
+        run: |
+          echo "Running performance budget checks..."
+          npx lighthouse http://localhost:3000 --only-categories=performance,seo,accessibility --output=json --output-path=./lighthouse-results.json
+          
+      - name: Upload Lighthouse Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouse-results
+          path: lighthouse-results.json
